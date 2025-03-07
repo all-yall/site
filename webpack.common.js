@@ -9,4 +9,7 @@ module.exports = {
     clean: true,
     filename: './js/app.js',
   },
+  experiments: {
+    asyncWebAssembly: true,
+  },
 };
