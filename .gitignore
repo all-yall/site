@@ -4,3 +4,5 @@
 node_modules
 dist
 .cache
+cli/target
+cli/pkg
