@@ -15,7 +15,7 @@ html {
   color: #222;
   font-size: 1em;
   line-height: 1.4;
-  background: #bac;
+  background: #102;
 }
 
 /*
@@ -246,3 +246,13 @@ textarea {
   }
 }
 
+.hyper-postprocessing.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+#terminal-container {
+  width: auto;
+  height: auto;
+}
