@@ -96,12 +96,6 @@ impl<'a> Term<'a> {
   fn handle_event(&mut self, string: String) {
     match &string[..] {
       "startup" => {
-        self.out.print("Loading Initial Filesystem..."); self.newline();
-        self.newline();
-        self.out.print("HARD DRIVE Status:  'ABSENT'"); self.newline();
-        self.out.print("Operating Mode:     'NON-PERSISTANT'"); self.newline();
-        self.out.print("User:               'ADMIN'"); self.newline();
-        self.newline();
         self.logo();
         self.prompt();
       }
@@ -137,7 +131,7 @@ impl<'a> Term<'a> {
   fn prompt(&mut self) {
     self.cli.line.clear();
     self.newline();
-    self.out.print("//ADMIN// > ")
+    self.out.print("[ADMIN] > ")
   }
 
   fn logo(&self) {

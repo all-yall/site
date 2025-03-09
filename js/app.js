@@ -8,7 +8,7 @@ import * as THREE from "three"
 import * as PP from "postprocessing"
 
 /*
- * I do not relaly like writing javascript, so I used as many libraries as
+ * I do not really like writing javascript, so I used as many libraries as
  * I could to minimize what I had to write.
  *
  * The XTermEffect file is taken from this
@@ -17,16 +17,23 @@ import * as PP from "postprocessing"
  * remainder of this file
  */
 
-
-var term = new Terminal();
+let options = {
+  "theme" : {
+    "background" : "#040525",
+    "foreground" : "#d8c2f7",
+  },
+  "cursorBlink": true,
+  "scrollback": 0,
+  "fontSize": 20,
+}
+var term = new Terminal(options);
 term.loadAddon(new WebglAddon());
 const fitAddon = new FitAddon();
 term.loadAddon(fitAddon);
 
 fitAddon.fit();
 let theme = term.options.theme;
-theme.background = "#040525"
-theme.foreground = "#d8c2f7"
+
 
 
 term.open(document.getElementById('terminal'));
@@ -41,8 +48,8 @@ XTermEffect.THREE = THREE
 XTermEffect.PP = PP
 let xTermEffect = new XTermEffect({
 		passes: [
+      new PP.EffectPass(null, new PP.ScanlineEffect({"density": 1.0, "scrollSpeed": 0.001})),
       new PP.EffectPass(null, new PP.BloomEffect()),
-      new PP.EffectPass(null, new PP.ScanlineEffect({"density": 1.1, "scrollSpeed": 0.001})),
 		]
 });
 
