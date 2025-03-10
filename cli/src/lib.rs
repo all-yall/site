@@ -3,6 +3,7 @@ use std::{borrow::Cow, io::Write, mem, str, thread::sleep, time::Duration};
 use wasm_bindgen::prelude::*;
 
 const LOGO: &str = include_str!("../ascii/logo.ascii");
+const HELP: &str = include_str!("../ascii/help.ascii");
 const CHAR_TIME: Duration = Duration::from_millis(10);
 
 #[wasm_bindgen]
@@ -96,7 +97,7 @@ impl<'a> Term<'a> {
   fn handle_event(&mut self, string: String) {
     match &string[..] {
       "startup" => {
-        self.logo();
+        self.cat(LOGO);
         self.prompt();
       }
       "\r" => { // newline
@@ -134,8 +135,8 @@ impl<'a> Term<'a> {
     self.out.print("[ADMIN] > ")
   }
 
-  fn logo(&self) {
-    for line in LOGO.lines() {
+  fn cat(&self, msg: &str) {
+    for line in msg.lines() {
       self.out.print(line);
       self.newline();
     }
@@ -152,7 +153,7 @@ impl<'a> Term<'a> {
     self.newline();
     match toks.get(0).unwrap() {
       &"help" => {
-        self.out.print("No help yet");
+        self.cat(HELP);
       }
       &"ls" | &"cd" | &"mkdir" | &"rm" => {
         self.out.print("Install 'HARD DRIVE' to activate 'FILE' module");
