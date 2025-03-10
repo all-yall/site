@@ -31,11 +31,7 @@ term.loadAddon(new WebglAddon());
 const fitAddon = new FitAddon();
 term.loadAddon(fitAddon);
 
-fitAddon.fit();
 let theme = term.options.theme;
-
-
-
 term.open(document.getElementById('terminal'));
 
 var myCli = cli.get_cli()
@@ -43,6 +39,7 @@ term.onData(function (key) {
   cli.event(myCli, key, term.write, term)
 })
 cli.event(myCli, "startup", term.write, term)
+
 
 XTermEffect.THREE = THREE
 XTermEffect.PP = PP
@@ -53,6 +50,11 @@ let xTermEffect = new XTermEffect({
 		]
 });
 
+window.onresize=function() {
+  fitAddon.fit();
+  xTermEffect.attach(term, true);
+}
 
+fitAddon.fit();
 xTermEffect.attach(term, true);
 xTermEffect.startAnimationLoop();
