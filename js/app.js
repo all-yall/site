@@ -58,3 +58,4 @@ window.onresize=function() {
 fitAddon.fit();
 xTermEffect.attach(term, true);
 xTermEffect.startAnimationLoop();
+console.log("Done loading")
