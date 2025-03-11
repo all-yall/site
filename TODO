@@ -1,4 +1,3 @@
-Fix double screen height when deployed
 fix freezing when deployed
 add delay to character display
 fix scanline size on various displays

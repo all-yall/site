@@ -2,6 +2,8 @@ import { Terminal } from "@xterm/xterm/lib/xterm.js"
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 
+require("@xterm/xterm/css/xterm.css")
+
 import XTermEffect from './XTermEffect';
 import * as cli from "cli"
 import * as THREE from "three"
