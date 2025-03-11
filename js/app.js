@@ -1,6 +1,6 @@
 import { Terminal } from "@xterm/xterm/lib/xterm.js"
 import { FitAddon } from '@xterm/addon-fit';
-import { WebglAddon } from '@xterm/addon-webgl';
+import { WebglAddon } from 'addon-webgl-with-custom-shaders/addon-webgl';
 
 require("@xterm/xterm/css/xterm.css")
 

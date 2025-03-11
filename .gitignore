@@ -6,3 +6,4 @@ dist
 .cache
 cli/target
 cli/pkg
+addon-webgl-with-custom-shaders/lib
