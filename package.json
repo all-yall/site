@@ -24,12 +24,9 @@
     "webpack-merge": "^5.9.0"
   },
   "dependencies": {
-    "@xterm/addon-fit": "^0.10.0",
-    "@xterm/xterm": "^5.5.0",
     "cli": "file:cli/pkg",
-    "addon-webgl-with-custom-shaders": "file:addon-webgl-with-custom-shaders/lib",
-    "pixi.js": "^8.8.1",
-    "postprocessing": "^6.37.1",
-    "three": "^0.174.0"
+    "@xterm/addon-webgl": "file:./xterm.js/addons/addon-webgl",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0"
   }
 }
