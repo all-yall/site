@@ -79,7 +79,7 @@ out vec4 outColor;
 void main() {
   vec3 base = texture(u_image, v_position).rgb;
   vec3 glow = texture(u_glow, v_position).rgb;
-  outColor = vec4(base + glow, 1.0);
+  outColor = vec4(base + glow * 1.3, 1.0);
 }`);
 
 const kawaseFragmentShaderSource = glsl(`#version 300 es
@@ -323,7 +323,9 @@ export class RectangleRenderer extends Disposable {
     const width = this._dimensions.device.canvas.width;
     const height = this._dimensions.device.canvas.height;
     const width_height = new Float32Array([width, height]);
-    const time = (new Date().getTime() / 1000) % 10000.0;
+    const time_speed = 5000;
+    const time_period = 3.1415 * 2.0;
+    const time = ((new Date().getTime() % time_speed) / time_speed) * time_period;
 
     ///////////////
     // Apply scanlines
