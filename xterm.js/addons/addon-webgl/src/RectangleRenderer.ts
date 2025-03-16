@@ -79,7 +79,7 @@ out vec4 outColor;
 void main() {
   vec3 base = texture(u_image, v_position).rgb;
   vec3 glow = texture(u_glow, v_position).rgb;
-  outColor = vec4(base + glow * 1.3, 1.0);
+  outColor = vec4(base + glow * 1.5, 1.0);
 }`);
 
 const kawaseFragmentShaderSource = glsl(`#version 300 es
@@ -108,7 +108,6 @@ const thresholdShaderSource = glsl(`#version 300 es
 precision lowp float;
 
 uniform sampler2D u_image;
-uniform vec2 u_resolution;
 
 in vec2 v_position;
 
@@ -129,6 +128,7 @@ const scanlineShaderSource = glsl(`#version 300 es
 precision lowp float;
 
 uniform sampler2D u_image;
+uniform vec2 u_unit;
 uniform vec2 u_resolution;
 uniform float u_time;
 
@@ -136,18 +136,20 @@ in vec2 v_position;
 
 out vec4 outColor;
 
-vec3 scanline(vec3 original, vec3 color, float offset) {
-  float intensity = dot(original, color) * (1.0 + sin(v_position.y * 1300.0 + offset));
+vec3 scanline(vec3 original, vec3 color, float offset, float multiplier) {
+  float intensity = dot(original, color) * (1.0 + sin((v_position.y * multiplier) * 25000.0 + offset));
   return intensity * color;
 }
 
 void main() {
   vec3 col = texture(u_image, v_position).rgb;
 
+  float mult = (u_resolution.y/u_unit.y) / 800.0;
+
   outColor = vec4(
-    scanline(col, vec3(1,0,0), u_time + 4.188) +
-    scanline(col, vec3(0,1,0), u_time + 2.094) +
-    scanline(col, vec3(0,0,1), u_time)
+    scanline(col, vec3(1,0.01,0.01), u_time + 4.188, mult) +
+    scanline(col, vec3(0.01,1,0.01), u_time + 2.094, mult) +
+    scanline(col, vec3(0.01,0.01,1), u_time, mult)
     ,
     1.0
   );
@@ -203,6 +205,8 @@ export class RectangleRenderer extends Disposable {
   private _scanlineProgram: WebGLProgram;
   private _scanlineProjectionLocation: WebGLProgram;
   private _scanlineImageLocation: WebGLProgram;
+  private _scanlineUnitLocation: WebGLProgram;
+  private _scanlineResolutionLocation: WebGLProgram;
   private _scanlineTimeLocation: WebGLProgram;
 
   private _bgFloat!: Float32Array;
@@ -253,7 +257,9 @@ export class RectangleRenderer extends Disposable {
 
     this._scanlineProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, 'u_projection'));
     this._scanlineImageLocation      = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, "u_image"));
-    this._scanlineTimeLocation      = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, "u_time"));
+    this._scanlineUnitLocation       = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, 'u_unit'));
+    this._scanlineResolutionLocation = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, 'u_resolution'));
+    this._scanlineTimeLocation       = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, "u_time"));
 
     // Create and set the vertex array object
     this._vertexArrayObject = gl.createVertexArray();
@@ -323,6 +329,9 @@ export class RectangleRenderer extends Disposable {
     const width = this._dimensions.device.canvas.width;
     const height = this._dimensions.device.canvas.height;
     const width_height = new Float32Array([width, height]);
+    const unit_width = width / this._terminal.cols;
+    const unit_height = height / this._terminal.rows;
+    const unit = new Float32Array([unit_width, unit_height]);
     const time_speed = 5000;
     const time_period = 3.1415 * 2.0;
     const time = ((new Date().getTime() % time_speed) / time_speed) * time_period;
@@ -333,6 +342,8 @@ export class RectangleRenderer extends Disposable {
     gl.useProgram(this._scanlineProgram);
     drawFrom(0, 2, this._scanlineImageLocation);
     gl.uniformMatrix4fv(this._scanlineProjectionLocation, false, PROJECTION_MATRIX);
+    gl.uniform2fv(this._scanlineUnitLocation, unit);
+    gl.uniform2fv(this._scanlineResolutionLocation, width_height);
     gl.uniform1f(this._scanlineTimeLocation, time*2.0);
     draw();
 
@@ -348,6 +359,7 @@ export class RectangleRenderer extends Disposable {
     // Blur the bright bits
     ///////////////
 
+    // TODO; Blur is resolution dependent. Might try to fix
     // Rendered terminal starts in 'A'
     gl.useProgram(this._kawaseProgram);
     drawFrom(1, 0, this._kawaseImageLocation);
