@@ -35,13 +35,9 @@ term.onData(function (key) {
 })
 cli.event(myCli, "startup", term.write, term)
 
-//passes: [
-//  new PP.EffectPass(null, new PP.ScanlineEffect({"density": 1.0, "scrollSpeed": 0.001})),
-//  new PP.EffectPass(null, new PP.BloomEffect()),
-//]
-
 window.onresize=function() {
   fitAddon.fit();
 }
+fitAddon.fit();
 
 console.log("Done loading")
