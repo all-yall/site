@@ -46,9 +46,9 @@ export class WebglRenderer extends Disposable implements IRenderer {
   private _rectangleRenderer: MutableDisposable<RectangleRenderer> = this._register(new MutableDisposable());
   private _glyphRenderer: MutableDisposable<GlyphRenderer> = this._register(new MutableDisposable());
 
-  private _customFrameBuffer: WebGLTexture;
-  private _customTexture: WebGLTexture;
-  private _customTextureNum: number;
+  private _customFrameBuffers: Array<WebGLTexture>;
+  private _customTextures: Array<WebGLTexture>;
+  private _customTextureNums: Array<number>;
 
   public readonly dimensions: IRenderDimensions;
 
@@ -153,24 +153,35 @@ export class WebglRenderer extends Disposable implements IRenderer {
       removeTerminalFromCache(this._terminal);
     }));
 
-    const gl = this._gl;
-    const texture = gl.createTexture();
-    if (texture == null) { throw "Could not create texture"; }
-    this._customTexture = texture;
-    this._customTextureNum = 20;
-    gl.activeTexture(gl.TEXTURE0 + this._customTextureNum);
-    gl.bindTexture(gl.TEXTURE_2D, this._customTexture)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, 1920, 1080, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    const frameBuffer = gl.createFramebuffer();
-    if (frameBuffer == null) { throw "Could not create frame buffer" }
-    this._customFrameBuffer = frameBuffer;
-    gl.bindFramebuffer(this._gl.FRAMEBUFFER, this._customFrameBuffer);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._customTexture, 0);
-    gl.bindFramebuffer(this._gl.FRAMEBUFFER, null);
+    this._customTextures = [];
+    this._customTextureNums = [];
+    this._customFrameBuffers = [];
+
+    let texture_num = 20;
+    for (let ii = 0; ii < 3; ii++) {
+      const gl = this._gl;
+      const texture = gl.createTexture();
+      if (texture == null) { console.log("Could not create texture"); }
+      this._customTextures.push(texture);
+      this._customTextureNums.push(texture_num);
+
+      gl.activeTexture(gl.TEXTURE0 + texture_num);
+      gl.bindTexture(gl.TEXTURE_2D, texture)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, 1920, 1080, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      const frameBuffer = gl.createFramebuffer();
+      console.log(frameBuffer)
+      if (frameBuffer == null) { console.log("Could not create frame buffer")}
+      this._customFrameBuffers.push(frameBuffer);
+      gl.bindFramebuffer(this._gl.FRAMEBUFFER, frameBuffer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+      gl.bindFramebuffer(this._gl.FRAMEBUFFER, null);
+
+      texture_num += 1;
+    }
   }
 
   public get textureAtlas(): HTMLCanvasElement | undefined {
@@ -219,9 +230,13 @@ export class WebglRenderer extends Disposable implements IRenderer {
     this._glyphRenderer.value?.setDimensions(this.dimensions);
     this._glyphRenderer.value?.handleResize();
 
-    const gl = this._gl;
-    gl.activeTexture(this._customTextureNum + gl.TEXTURE0)
-    gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, this._canvas.width, this._canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    if (this._customTextureNums) {
+      const gl = this._gl;
+      for (let ii = 0; ii < this._customTextureNums.length; ii++) {
+        gl.activeTexture(gl.TEXTURE0 + this._customTextureNums[ii])
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this._canvas.width, this._canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      }
+    }
 
     this._refreshCharAtlas();
 
@@ -349,7 +364,7 @@ export class WebglRenderer extends Disposable implements IRenderer {
 
   public renderRows(start: number, end: number): void {
     const gl = this._gl;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this._customFrameBuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._customFrameBuffers[0]);
     if (!this._isAttached) {
       if (this._coreBrowserService.window.document.body.contains(this._core.screenElement!) && this._charSizeService.width && this._charSizeService.height) {
         this._updateDimensions();
@@ -386,8 +401,7 @@ export class WebglRenderer extends Disposable implements IRenderer {
     if (!this._cursorBlinkStateManager.value || this._cursorBlinkStateManager.value.isCursorVisible) {
       this._rectangleRenderer.value.renderCursor();
     }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    this._rectangleRenderer.value.renderTerminalWithCustomShaders(this._customTextureNum);
+    this._rectangleRenderer.value.renderTerminalWithCustomShaders(this._customFrameBuffers, this._customTextureNums);
   }
 
   private _updateCursorBlink(): void {

@@ -22,6 +22,10 @@ const enum VertexAttribLocations {
   UNIT_QUAD = 3
 }
 
+// this allows syntax highlighting with
+// my vim setup for glsl
+function glsl(s:string): string {return s;}
+
 const vertexShaderSource = `#version 300 es
 layout (location = ${VertexAttribLocations.POSITION}) in vec2 a_position;
 layout (location = ${VertexAttribLocations.SIZE}) in vec2 a_size;
@@ -50,7 +54,7 @@ void main() {
 }`;
 
 
-const customVertexShaderSource = `#version 300 es
+const customVertexShaderSource = glsl(`#version 300 es
 layout (location = ${VertexAttribLocations.POSITION}) in vec2 a_position;
 layout (location = ${VertexAttribLocations.SIZE}) in vec2 a_size;
 layout (location = ${VertexAttribLocations.UNIT_QUAD}) in vec2 a_unitquad;
@@ -60,20 +64,67 @@ out vec2 v_position;
 
 void main() {
   v_position = a_position + (a_unitquad * a_size);
-  gl_Position =  vec4(1, -1, 1,1) * (u_projection * vec4(v_position, 0.0, 1.0));
-}`;
+  gl_Position =  vec4(1, -1, 1, 1) * (u_projection * vec4(v_position, 0.0, 1.0));
+}`);
 
-const customFragmentShaderSource = `#version 300 es
+const customFragmentShaderSource = glsl(`#version 300 es
 precision lowp float;
 
 uniform sampler2D u_image;
+uniform sampler2D u_glow;
 in vec2 v_position;
 
 out vec4 outColor;
 
 void main() {
-  outColor = texture(u_image, v_position);
-}`;
+  vec3 base = texture(u_image, v_position).rgb;
+  vec3 glow = texture(u_glow, v_position).rgb;
+  outColor = vec4(base + glow, 1.0);
+}`);
+
+const kawaseFragmentShaderSource = glsl(`#version 300 es
+precision lowp float;
+
+uniform sampler2D u_image;
+uniform vec2 u_resolution;
+uniform float u_blursize;
+
+in vec2 v_position;
+
+out vec4 outColor;
+
+void main() {
+  vec3 col = (
+    texture(u_image, v_position + (u_blursize * vec2( 1,  1))/u_resolution).rgb +
+    texture(u_image, v_position + (u_blursize * vec2(-1, -1))/u_resolution).rgb +
+    texture(u_image, v_position + (u_blursize * vec2(-1,  1))/u_resolution).rgb +
+    texture(u_image, v_position + (u_blursize * vec2( 1, -1))/u_resolution).rgb
+  ) / 4.0;
+
+  outColor = vec4(col, 1.0);
+}`);
+
+const thresholdShaderSource = glsl(`#version 300 es
+precision lowp float;
+
+uniform sampler2D u_image;
+uniform vec2 u_resolution;
+
+in vec2 v_position;
+
+out vec4 outColor;
+
+void main() {
+  vec3 col = texture(u_image, v_position).rgb;
+  float brightness = dot(col, vec3(0.2126, 0.7152, 0.0722));
+
+  if (brightness < 0.5) {
+    col = vec3(0);
+  }
+
+  outColor = vec4(col, 1.0);
+}`);
+
 
 const INDICES_PER_RECTANGLE = 8;
 const BYTES_PER_RECTANGLE = INDICES_PER_RECTANGLE * Float32Array.BYTES_PER_ELEMENT;
@@ -102,12 +153,25 @@ let $a = 0;
 export class RectangleRenderer extends Disposable {
 
   private _program: WebGLProgram;
-  private _customProgram: WebGLProgram;
   private _vertexArrayObject: IWebGLVertexArrayObject;
   private _attributesBuffer: WebGLBuffer;
   private _projectionLocation: WebGLUniformLocation;
+
+  private _customProgram: WebGLProgram;
   private _customProjectionLocation: WebGLUniformLocation;
-  private _imageLocation: WebGLUniformLocation;
+  private _customBaseImageLocation: WebGLUniformLocation;
+  private _customGlowImageLocation: WebGLUniformLocation;
+
+  private _kawaseProgram: WebGLProgram;
+  private _kawaseProjectionLocation: WebGLUniformLocation;
+  private _kawaseImageLocation: WebGLUniformLocation;
+  private _kawaseResolutionLocation: WebGLUniformLocation;
+  private _kawaseBlursizeLocation: WebGLUniformLocation;
+
+  private _thresholdProgram: WebGLProgram;
+  private _thresholdProjectionLocation: WebGLProgram;
+  private _thresholdImageLocation: WebGLProgram;
+
   private _bgFloat!: Float32Array;
   private _cursorFloat!: Float32Array;
 
@@ -126,13 +190,31 @@ export class RectangleRenderer extends Disposable {
 
     this._program = throwIfFalsy(createProgram(gl, vertexShaderSource, fragmentShaderSource));
     this._register(toDisposable(() => gl.deleteProgram(this._program)));
+
     this._customProgram = throwIfFalsy(createProgram(gl, customVertexShaderSource, customFragmentShaderSource));
     this._register(toDisposable(() => gl.deleteProgram(this._customProgram)));
 
+    this._kawaseProgram = throwIfFalsy(createProgram(gl, customVertexShaderSource, kawaseFragmentShaderSource));
+    this._register(toDisposable(() => gl.deleteProgram(this._kawaseProgram)));
+
+    this._thresholdProgram = throwIfFalsy(createProgram(gl, customVertexShaderSource, thresholdShaderSource));
+    this._register(toDisposable(() => gl.deleteProgram(this._thresholdProgram)));
+
     // Uniform locations
     this._projectionLocation = throwIfFalsy(gl.getUniformLocation(this._program, 'u_projection'));
-    this._imageLocation = throwIfFalsy(gl.getUniformLocation(this._customProgram, "u_image"));
+
     this._customProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._customProgram, 'u_projection'));
+    this._customBaseImageLocation =  throwIfFalsy(gl.getUniformLocation(this._customProgram, "u_image"));
+    this._customGlowImageLocation =  throwIfFalsy(gl.getUniformLocation(this._customProgram, "u_glow"));
+
+    this._kawaseProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._kawaseProgram, 'u_projection'));
+    this._kawaseImageLocation      = throwIfFalsy(gl.getUniformLocation(this._kawaseProgram, "u_image"));
+    this._kawaseResolutionLocation = throwIfFalsy(gl.getUniformLocation(this._kawaseProgram, 'u_resolution'));
+    this._kawaseBlursizeLocation   = throwIfFalsy(gl.getUniformLocation(this._kawaseProgram, 'u_blursize'));
+
+    this._thresholdProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._thresholdProgram, 'u_projection'));
+    this._thresholdImageLocation      = throwIfFalsy(gl.getUniformLocation(this._thresholdProgram, "u_image"));
+
 
     // Create and set the vertex array object
     this._vertexArrayObject = gl.createVertexArray();
@@ -178,20 +260,80 @@ export class RectangleRenderer extends Disposable {
   }
 
 
-  public renderTerminalWithCustomShaders(texNum: number): void {
+  public renderTerminalWithCustomShaders(frameBuffers: Array<WebGLFramebuffer>, textureNums: Array<number>): void {
     const gl = this._gl;
 
+    function drawFrom(from: number, to: number | null, location: WebGLUniformLocation) {
+      gl.uniform1i(location, textureNums[from]);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, to != null ? frameBuffers[to]: null);
+    }
+
+
+    const verteces = this._vertices;
+    const vao = this._vertexArrayObject;
+    const attributesBuffer = this._attributesBuffer;
+
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, attributesBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, verteces.attributes, gl.DYNAMIC_DRAW);
+
+    function draw() {
+      gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_BYTE, 0, verteces.count);
+    }
+
+    const width = this._dimensions.device.canvas.width;
+    const height = this._dimensions.device.canvas.height;
+    const width_height = new Float32Array([width, height]);
+
+    ///////////////
+    // Put the bright spots in  another place
+    ///////////////
+    gl.useProgram(this._thresholdProgram);
+    drawFrom(0, 1, this._thresholdImageLocation);
+    gl.uniformMatrix4fv(this._thresholdProjectionLocation, false, PROJECTION_MATRIX);
+    draw();
+
+    ///////////////
+    // APPLY BLOOM
+    ///////////////
+
+    // Rendered terminal starts in 'A'
+    gl.useProgram(this._kawaseProgram);
+    drawFrom(1, 2, this._kawaseImageLocation);
+    gl.uniformMatrix4fv(this._kawaseProjectionLocation, false, PROJECTION_MATRIX);
+    gl.uniform2fv(this._kawaseResolutionLocation, width_height);
+    gl.uniform1f(this._kawaseBlursizeLocation, 1.0);
+    draw();
+
+    drawFrom(2, 1, this._kawaseImageLocation);
+    gl.uniform1f(this._kawaseBlursizeLocation, 3.0);
+    draw();
+
+    drawFrom(1, 2, this._kawaseImageLocation);
+    gl.uniform1f(this._kawaseBlursizeLocation, 5.0);
+    draw();
+
+    drawFrom(2, 1, this._kawaseImageLocation);
+    gl.uniform1f(this._kawaseBlursizeLocation, 5.0);
+    draw();
+
+    drawFrom(1, 2, this._kawaseImageLocation);
+    gl.uniform1f(this._kawaseBlursizeLocation, 7.0);
+    draw();
+
+
+    ///////////////////
+    // AND THEN FLIPPING AND
+    // FINAL EFFECTS
+    ///////////////////
+
     gl.useProgram(this._customProgram);
+    drawFrom(0, null, this._customBaseImageLocation);
+    gl.uniform1i(this._customGlowImageLocation, textureNums[2]);
 
-    gl.bindVertexArray(this._vertexArrayObject);
-
-    gl.uniform1i(this._imageLocation, texNum);
     gl.uniformMatrix4fv(this._customProjectionLocation, false, PROJECTION_MATRIX);
 
-    // Bind attributes buffer and draw
-    gl.bindBuffer(gl.ARRAY_BUFFER, this._attributesBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this._vertices.attributes, gl.DYNAMIC_DRAW);
-    gl.drawElementsInstanced(this._gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_BYTE, 0, this._vertices.count);
+    draw();
   }
 
   public renderBackgrounds(): void {

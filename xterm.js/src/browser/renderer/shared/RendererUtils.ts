@@ -7,6 +7,7 @@ import { IDimensions, IRenderDimensions } from 'browser/renderer/shared/Types';
 
 export function throwIfFalsy<T>(value: T | undefined | null): T {
   if (!value) {
+    console.log("Value was falsy " + value);
     throw new Error('value must not be falsy');
   }
   return value;
