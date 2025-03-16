@@ -6,19 +6,26 @@ require("@xterm/xterm/css/xterm.css")
 
 import * as cli from "cli"
 
+
 let options = {
   "theme" : {
-    "background" : "#040525",
+    "background" : "#080A4A",
     "foreground" : "#d8c2f7",
   },
   "cursorBlink": true,
   "scrollback": 0,
-  "fontSize": 20,
+  "fontSize": 18,
+  "fontFamily": "PetMeY",
 }
+
 var term = new Terminal(options);
 term.loadAddon(new WebglAddon());
 const fitAddon = new FitAddon();
 term.loadAddon(fitAddon);
+
+
+// hacky bit to make sure font is loaded before creating terminal
+await document.fonts.load("10px PetMeY");
 
 term.open(document.getElementById('terminal'));
 
@@ -28,10 +35,10 @@ term.onData(function (key) {
 })
 cli.event(myCli, "startup", term.write, term)
 
-		//passes: [
-    //  new PP.EffectPass(null, new PP.ScanlineEffect({"density": 1.0, "scrollSpeed": 0.001})),
-    //  new PP.EffectPass(null, new PP.BloomEffect()),
-		//]
+//passes: [
+//  new PP.EffectPass(null, new PP.ScanlineEffect({"density": 1.0, "scrollSpeed": 0.001})),
+//  new PP.EffectPass(null, new PP.BloomEffect()),
+//]
 
 window.onresize=function() {
   fitAddon.fit();

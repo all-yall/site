@@ -238,3 +238,8 @@ textarea {
 #terminal {
   height: 100%;
 }
+
+@font-face {
+  font-family: "PetMeY";
+  src: url('../fonts/PetMeY.ttf');
+}
