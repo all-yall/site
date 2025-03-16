@@ -125,6 +125,34 @@ void main() {
   outColor = vec4(col, 1.0);
 }`);
 
+const scanlineShaderSource = glsl(`#version 300 es
+precision lowp float;
+
+uniform sampler2D u_image;
+uniform vec2 u_resolution;
+uniform float u_time;
+
+in vec2 v_position;
+
+out vec4 outColor;
+
+vec3 scanline(vec3 original, vec3 color, float offset) {
+  float intensity = dot(original, color) * (1.0 + sin(v_position.y * 1300.0 + offset));
+  return intensity * color;
+}
+
+void main() {
+  vec3 col = texture(u_image, v_position).rgb;
+
+  outColor = vec4(
+    scanline(col, vec3(1,0,0), u_time + 4.188) +
+    scanline(col, vec3(0,1,0), u_time + 2.094) +
+    scanline(col, vec3(0,0,1), u_time)
+    ,
+    1.0
+  );
+}`);
+
 
 const INDICES_PER_RECTANGLE = 8;
 const BYTES_PER_RECTANGLE = INDICES_PER_RECTANGLE * Float32Array.BYTES_PER_ELEMENT;
@@ -172,6 +200,11 @@ export class RectangleRenderer extends Disposable {
   private _thresholdProjectionLocation: WebGLProgram;
   private _thresholdImageLocation: WebGLProgram;
 
+  private _scanlineProgram: WebGLProgram;
+  private _scanlineProjectionLocation: WebGLProgram;
+  private _scanlineImageLocation: WebGLProgram;
+  private _scanlineTimeLocation: WebGLProgram;
+
   private _bgFloat!: Float32Array;
   private _cursorFloat!: Float32Array;
 
@@ -200,6 +233,9 @@ export class RectangleRenderer extends Disposable {
     this._thresholdProgram = throwIfFalsy(createProgram(gl, customVertexShaderSource, thresholdShaderSource));
     this._register(toDisposable(() => gl.deleteProgram(this._thresholdProgram)));
 
+    this._scanlineProgram = throwIfFalsy(createProgram(gl, customVertexShaderSource, scanlineShaderSource));
+    this._register(toDisposable(() => gl.deleteProgram(this._scanlineProgram)));
+
     // Uniform locations
     this._projectionLocation = throwIfFalsy(gl.getUniformLocation(this._program, 'u_projection'));
 
@@ -215,6 +251,9 @@ export class RectangleRenderer extends Disposable {
     this._thresholdProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._thresholdProgram, 'u_projection'));
     this._thresholdImageLocation      = throwIfFalsy(gl.getUniformLocation(this._thresholdProgram, "u_image"));
 
+    this._scanlineProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, 'u_projection'));
+    this._scanlineImageLocation      = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, "u_image"));
+    this._scanlineTimeLocation      = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, "u_time"));
 
     // Create and set the vertex array object
     this._vertexArrayObject = gl.createVertexArray();
@@ -284,52 +323,61 @@ export class RectangleRenderer extends Disposable {
     const width = this._dimensions.device.canvas.width;
     const height = this._dimensions.device.canvas.height;
     const width_height = new Float32Array([width, height]);
+    const time = (new Date().getTime() / 1000) % 10000.0;
+
+    ///////////////
+    // Apply scanlines
+    ///////////////
+    gl.useProgram(this._scanlineProgram);
+    drawFrom(0, 2, this._scanlineImageLocation);
+    gl.uniformMatrix4fv(this._scanlineProjectionLocation, false, PROJECTION_MATRIX);
+    gl.uniform1f(this._scanlineTimeLocation, time*2.0);
+    draw();
 
     ///////////////
     // Put the bright spots in  another place
     ///////////////
     gl.useProgram(this._thresholdProgram);
-    drawFrom(0, 1, this._thresholdImageLocation);
+    drawFrom(2, 1, this._thresholdImageLocation);
     gl.uniformMatrix4fv(this._thresholdProjectionLocation, false, PROJECTION_MATRIX);
     draw();
 
     ///////////////
-    // APPLY BLOOM
+    // Blur the bright bits
     ///////////////
 
     // Rendered terminal starts in 'A'
     gl.useProgram(this._kawaseProgram);
-    drawFrom(1, 2, this._kawaseImageLocation);
+    drawFrom(1, 0, this._kawaseImageLocation);
     gl.uniformMatrix4fv(this._kawaseProjectionLocation, false, PROJECTION_MATRIX);
     gl.uniform2fv(this._kawaseResolutionLocation, width_height);
     gl.uniform1f(this._kawaseBlursizeLocation, 1.0);
     draw();
 
-    drawFrom(2, 1, this._kawaseImageLocation);
+    drawFrom(0, 1, this._kawaseImageLocation);
     gl.uniform1f(this._kawaseBlursizeLocation, 3.0);
     draw();
 
-    drawFrom(1, 2, this._kawaseImageLocation);
+    drawFrom(1, 0, this._kawaseImageLocation);
     gl.uniform1f(this._kawaseBlursizeLocation, 5.0);
     draw();
 
-    drawFrom(2, 1, this._kawaseImageLocation);
+    drawFrom(0, 1, this._kawaseImageLocation);
     gl.uniform1f(this._kawaseBlursizeLocation, 5.0);
     draw();
 
-    drawFrom(1, 2, this._kawaseImageLocation);
+    drawFrom(1, 0, this._kawaseImageLocation);
     gl.uniform1f(this._kawaseBlursizeLocation, 7.0);
     draw();
 
 
     ///////////////////
-    // AND THEN FLIPPING AND
-    // FINAL EFFECTS
+    // Recombine
     ///////////////////
 
     gl.useProgram(this._customProgram);
-    drawFrom(0, null, this._customBaseImageLocation);
-    gl.uniform1i(this._customGlowImageLocation, textureNums[2]);
+    drawFrom(2, null, this._customBaseImageLocation);
+    gl.uniform1i(this._customGlowImageLocation, textureNums[0]);
 
     gl.uniformMatrix4fv(this._customProjectionLocation, false, PROJECTION_MATRIX);
 

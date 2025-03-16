@@ -95,6 +95,12 @@ export class WebglAddon extends Disposable implements ITerminalAddon , IWebglApi
       renderService.setRenderer((this._terminal as any)._core._createRenderer());
       renderService.handleResize(terminal.cols, terminal.rows);
     }));
+
+    let renderLoop = () => {
+      this._renderer?.renderRows(0,0);
+      window.requestAnimationFrame(renderLoop);
+    }
+    window.requestAnimationFrame(renderLoop);
   }
 
   public get textureAtlas(): HTMLCanvasElement | undefined {
