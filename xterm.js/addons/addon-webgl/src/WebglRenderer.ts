@@ -157,9 +157,10 @@ export class WebglRenderer extends Disposable implements IRenderer {
     this._customTextureNums = [];
     this._customFrameBuffers = [];
 
-    let texture_num = 20;
-    for (let ii = 0; ii < 3; ii++) {
-      const gl = this._gl;
+    const gl = this._gl;
+    const num_textures = 3;
+    let texture_num = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) - (num_textures + 1);
+    for (let ii = 0; ii < num_textures; ii++) {
       const texture = gl.createTexture();
       if (texture == null) { console.log("Could not create texture"); }
       this._customTextures.push(texture);
@@ -171,14 +172,12 @@ export class WebglRenderer extends Disposable implements IRenderer {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, 1920, 1080, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
       const frameBuffer = gl.createFramebuffer();
-      console.log(frameBuffer)
       if (frameBuffer == null) { console.log("Could not create frame buffer")}
       this._customFrameBuffers.push(frameBuffer);
       gl.bindFramebuffer(this._gl.FRAMEBUFFER, frameBuffer);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
-      gl.bindFramebuffer(this._gl.FRAMEBUFFER, null);
 
       texture_num += 1;
     }
@@ -236,6 +235,7 @@ export class WebglRenderer extends Disposable implements IRenderer {
         gl.activeTexture(gl.TEXTURE0 + this._customTextureNums[ii])
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this._canvas.width, this._canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
       }
+      gl.activeTexture(gl.TEXTURE0);
     }
 
     this._refreshCharAtlas();
@@ -718,7 +718,7 @@ export class JoinedCellData extends AttributeData implements ICellData {
     return [this.fg, this.getChars(), this.getWidth(), this.getCode()];
   }
 }
-
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 function clamp(value: number, max: number, min: number = 0): number {
   return Math.max(Math.min(value, max), min);
 }

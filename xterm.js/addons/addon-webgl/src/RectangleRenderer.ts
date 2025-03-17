@@ -388,7 +388,6 @@ export class RectangleRenderer extends Disposable {
     ///////////////////
     // Recombine
     ///////////////////
-
     gl.useProgram(this._customProgram);
     drawFrom(2, null, this._customBaseImageLocation);
     gl.uniform1i(this._customGlowImageLocation, textureNums[0]);
