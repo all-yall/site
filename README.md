@@ -1,3 +1,5 @@
+# Link
+link to the site; https://github.com/all-yall/site
 # About
 This will be my personal website.
 It is a fantasy computer called made by
