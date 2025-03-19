@@ -162,7 +162,10 @@ export class WebglRenderer extends Disposable implements IRenderer {
     let texture_num = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) - (num_textures + 1);
     for (let ii = 0; ii < num_textures; ii++) {
       const texture = gl.createTexture();
-      if (texture == null) { console.log("Could not create texture"); }
+      if (texture == null) {
+        console.log("Could not create texture");
+        throw "Error setting up WEBGL renderer";
+      }
       this._customTextures.push(texture);
       this._customTextureNums.push(texture_num);
 
@@ -174,7 +177,10 @@ export class WebglRenderer extends Disposable implements IRenderer {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
       gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
       const frameBuffer = gl.createFramebuffer();
-      if (frameBuffer == null) { console.log("Could not create frame buffer")}
+      if (frameBuffer == null) {
+        console.log("Could not create frame buffer");
+        throw "Error setting up WEBGL renderer";
+      }
       this._customFrameBuffers.push(frameBuffer);
       gl.bindFramebuffer(this._gl.FRAMEBUFFER, frameBuffer);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
