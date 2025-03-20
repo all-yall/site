@@ -1,6 +1,7 @@
 use std::{borrow::Cow, io::Write, mem, str, thread::sleep, time::Duration};
 
 use wasm_bindgen::prelude::*;
+use kanal::{AsyncSender, AsyncReceiver, bounded_async};
 
 const LOGO: &str = include_str!("../ascii/logo.ascii");
 const HELP: &str = include_str!("../ascii/help.ascii");
@@ -22,6 +23,9 @@ extern "C" {
     // Multiple arguments too!
     #[wasm_bindgen(js_namespace = console, js_name = log)]
     fn log_many(a: &str, b: &str);
+
+    // I am a webworker!
+    fn postMessage(a: &str);
 }
 
 struct JsOut<'a> {
@@ -166,11 +170,51 @@ impl<'a> Term<'a> {
   }
 }
 
+#[wasm_bindgen]
+pub struct JsToRustChannel {
+  send: Option<AsyncSender<String>>,
+  recv: AsyncReceiver<String>,
+}
 
 #[wasm_bindgen]
-pub fn event(cli: &mut Cli, string: String, stdout_func: &js_sys::Function, context: &JsValue) {
+pub struct JsSender(AsyncSender<String>);
+
+#[wasm_bindgen]
+impl JsToRustChannel {
+  pub fn take_sender(&mut self) -> JsSender {
+    JsSender(self.send.take().expect("Can't take twice!"))
+  }
+}
+
+#[wasm_bindgen]
+impl JsSender {
+  pub async fn send(&mut self, message: String) {
+    self.0.send(message).await;
+  }
+}
+
+
+#[wasm_bindgen]
+pub fn get_channel() -> JsToRustChannel {
+  let (send, recv) = bounded_async(10); // idk, 10 is good right?
+  let send = Some(send);
+  JsToRustChannel {
+    send,
+    recv
+  }
+}
+
+#[wasm_bindgen]
+pub async fn event(cli: &mut Cli, string: String, stdout_func: &js_sys::Function, context: &JsValue) {
   let mut term = Term::new(cli, stdout_func, context);
   term.handle_event(string);
 }
 
-
+#[wasm_bindgen]
+pub async fn run(channel: &mut JsToRustChannel, cli: &mut Cli, stdout_func: &js_sys::Function, context: &JsValue) {
+  let mut term = Term::new(cli, stdout_func, context);
+  loop {
+    let message = channel.recv.recv().await;
+    term.handle_event(message.unwrap());
+  }
+}

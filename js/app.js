@@ -1,4 +1,4 @@
-import { Terminal } from "@xterm/xterm/lib/xterm.js"
+import { Terminal } from "@xterm/xterm"
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 
@@ -28,16 +28,20 @@ term.loadAddon(fitAddon);
 await document.fonts.load("10px PetMeY");
 
 term.open(document.getElementById('terminal'));
+const worker = new Worker(new URL("./worker.js", import.meta.url));
 
-var myCli = cli.get_cli()
-term.onData(function (key) {
-  cli.event(myCli, key, term.write, term)
-})
-cli.event(myCli, "startup", term.write, term)
+worker.onmessage = function(_) {
+  worker.onmessage = function(data) {
+    term.write(data.data);
+  }
+  worker.postMessage("startup")
+
+  term.onData(function (key) {
+    worker.postMessage(key)
+  })
+}
 
 window.onresize=function() {
   fitAddon.fit();
 }
 fitAddon.fit();
-
-console.log("Done loading")
