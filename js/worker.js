@@ -1,17 +1,13 @@
 // greetingWorker.js
-import * as cli from "cli"
+import * as amethyst from "cli"
 
-const cliInstance = cli.get_cli();
-const jsToRustChannel = cli.get_channel();
-const jsSender = jsToRustChannel.take_sender();
-
-console.log("Test");
+const cli = amethyst.get_cli();
+const jsSender = cli.take_sender();
 
 self.onmessage = async (data) => {
-  console.log("Recieved messsage; '" + data.data + "'");
   await jsSender.send(data.data);
 }
-
+// required as it marks the completion of the handler setup from the worker's end
 self.postMessage("done loading")
 
-await cli.run(jsToRustChannel, cliInstance, self.postMessage, this);
+await amethyst.run(cli, self.postMessage, this);
