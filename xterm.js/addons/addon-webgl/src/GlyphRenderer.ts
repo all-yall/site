@@ -120,10 +120,10 @@ export class GlyphRenderer extends Disposable {
 
     if (TextureAtlas.maxAtlasPages === undefined) {
       // Typically 8 or 16
-      // this is a hacky workaround; i decrease the number of available textures here to use
-      // them instead for 1337 shaders. at the very least this should be a passed in number
+      // This is a hacky workaround; I decrease the number of available textures here to use
+      // them instead for 1337 shaders. At the very least this should be a passed in number
       // instead of just hard coding it here. Anyway, thanks for reading.
-      TextureAtlas.maxAtlasPages = Math.min(32, throwIfFalsy(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) - 4 as number | null));
+      TextureAtlas.maxAtlasPages = Math.min(32, throwIfFalsy(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) - 5 as number | null));
       // Almost all clients will support >= 4096
       TextureAtlas.maxTextureSize = throwIfFalsy(gl.getParameter(gl.MAX_TEXTURE_SIZE) as number | null);
     }

@@ -362,25 +362,25 @@ export class RectangleRenderer extends Disposable {
     // TODO; Blur is resolution dependent. Might try to fix
     // Rendered terminal starts in 'A'
     gl.useProgram(this._kawaseProgram);
-    drawFrom(1, 0, this._kawaseImageLocation);
+    drawFrom(1, 3, this._kawaseImageLocation);
     gl.uniformMatrix4fv(this._kawaseProjectionLocation, false, PROJECTION_MATRIX);
     gl.uniform2fv(this._kawaseResolutionLocation, width_height);
     gl.uniform1f(this._kawaseBlursizeLocation, 1.0);
     draw();
 
-    drawFrom(0, 1, this._kawaseImageLocation);
+    drawFrom(3, 1, this._kawaseImageLocation);
     gl.uniform1f(this._kawaseBlursizeLocation, 3.0);
     draw();
 
-    drawFrom(1, 0, this._kawaseImageLocation);
+    drawFrom(1, 3, this._kawaseImageLocation);
     gl.uniform1f(this._kawaseBlursizeLocation, 5.0);
     draw();
 
-    drawFrom(0, 1, this._kawaseImageLocation);
+    drawFrom(3, 1, this._kawaseImageLocation);
     gl.uniform1f(this._kawaseBlursizeLocation, 5.0);
     draw();
 
-    drawFrom(1, 0, this._kawaseImageLocation);
+    drawFrom(1, 3, this._kawaseImageLocation);
     gl.uniform1f(this._kawaseBlursizeLocation, 7.0);
     draw();
 
@@ -390,7 +390,7 @@ export class RectangleRenderer extends Disposable {
     ///////////////////
     gl.useProgram(this._customProgram);
     drawFrom(2, null, this._customBaseImageLocation);
-    gl.uniform1i(this._customGlowImageLocation, textureNums[0]);
+    gl.uniform1i(this._customGlowImageLocation, textureNums[3]);
 
     gl.uniformMatrix4fv(this._customProjectionLocation, false, PROJECTION_MATRIX);
 

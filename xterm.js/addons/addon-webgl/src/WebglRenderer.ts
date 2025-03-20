@@ -158,7 +158,7 @@ export class WebglRenderer extends Disposable implements IRenderer {
     this._customFrameBuffers = [];
 
     const gl = this._gl;
-    const num_textures = 3;
+    const num_textures = 4;
     let texture_num = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) - (num_textures + 1);
     for (let ii = 0; ii < num_textures; ii++) {
       const texture = gl.createTexture();
@@ -406,6 +406,12 @@ export class WebglRenderer extends Disposable implements IRenderer {
     this._glyphRenderer.value.render(this._model);
     if (!this._cursorBlinkStateManager.value || this._cursorBlinkStateManager.value.isCursorVisible) {
       this._rectangleRenderer.value.renderCursor();
+    }
+  }
+
+  public drawTerminalToCanvasWithShaders(): void {
+    if (! this._rectangleRenderer.value) {
+      return;
     }
     this._rectangleRenderer.value.renderTerminalWithCustomShaders(this._customFrameBuffers, this._customTextureNums);
   }

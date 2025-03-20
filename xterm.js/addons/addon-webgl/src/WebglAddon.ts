@@ -97,7 +97,7 @@ export class WebglAddon extends Disposable implements ITerminalAddon , IWebglApi
     }));
 
     let renderLoop = () => {
-      this._renderer?.renderRows(0,0);
+      this._renderer?.drawTerminalToCanvasWithShaders();
       window.requestAnimationFrame(renderLoop);
     }
     window.requestAnimationFrame(renderLoop);
