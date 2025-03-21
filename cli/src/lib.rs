@@ -1,16 +1,18 @@
-use std::{borrow::Cow, io::Write, mem, str, thread::sleep, time::Duration};
+use std::{io::Write, str};
 
 use wasm_bindgen::prelude::*;
 use kanal::{AsyncSender, AsyncReceiver, bounded_async};
 
 const LOGO: &str = include_str!("../ascii/logo.ascii");
 const HELP: &str = include_str!("../ascii/help.ascii");
-const CHAR_TIME: Duration = Duration::from_millis(10);
 
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &JsValue);
+
+    #[wasm_bindgen(js_namespace = self)]
+    async fn sleep(s: u32);
 }
 
 struct JsOut<'a> {
@@ -82,7 +84,7 @@ pub struct JsSender(AsyncSender<String>);
 #[wasm_bindgen]
 impl JsSender {
   pub async fn send(&mut self, message: String) {
-    self.0.send(message).await;
+    let _ = self.0.send(message).await;
   }
 }
 #[wasm_bindgen]
@@ -108,19 +110,19 @@ impl<'a> Term<'a> {
   async fn run(&mut self) {
     loop {
       let event = self.cli.recv.recv().await.unwrap();
-      self.handle_event(event);
+      self.handle_event(event).await;
     }
   }
 
-  fn handle_event(&mut self, string: String) {
+  async fn handle_event(&mut self, string: String) {
     match &string[..] {
       "startup" => {
-        self.cat(LOGO);
+        self.cat(LOGO).await;
         self.prompt();
       }
       "\r" => { // newline
         let line = self.cli.line.clone();
-        self.command(line);
+        self.command(line).await;
         self.prompt();
       }
       "\x7f" => self.backspace(), // backspace
@@ -153,14 +155,27 @@ impl<'a> Term<'a> {
     self.out.print("[ADMIN] > ")
   }
 
-  fn cat(&self, msg: &str) {
+  async fn cat(&mut self, msg: &str) {
     for line in msg.lines() {
-      self.out.print(line);
+      for char in line.chars() {
+        // if its an hour glass emoji, then wait for a bit instead of printing it.
+        if char == '⌛' {
+          sleep(130).await;
+        } else if char == '←'  {
+          self.out.print("\x08")
+        } else if char == ' ' {
+          // no wait on spacec
+          self.out.print(&char.to_string());
+        } else {
+          self.out.print(&char.to_string());
+          sleep(3).await;
+        }
+      }
       self.newline();
     }
   }
 
-  fn command(&mut self, line: String) {
+  async fn command(&mut self, line: String) {
 
     let toks: Vec<&str> = line.split(" ").filter(|tok| !tok.is_empty()).collect();
 
@@ -171,7 +186,7 @@ impl<'a> Term<'a> {
     self.newline();
     match toks.get(0).unwrap() {
       &"help" => {
-        self.cat(HELP);
+        self.cat(HELP).await;
       }
       &"ls" | &"cd" | &"mkdir" | &"rm" => {
         self.out.print("Install 'HARD DRIVE' to activate 'FILE' module");

@@ -4,6 +4,14 @@ import * as amethyst from "cli"
 const cli = amethyst.get_cli();
 const jsSender = cli.take_sender();
 
+// functions to export to rust
+self.sleep = async function(time) {
+  await (
+    new Promise(resolve => setTimeout(resolve, time))
+  );
+}
+
+
 self.onmessage = async (data) => {
   await jsSender.send(data.data);
 }
