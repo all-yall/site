@@ -14,6 +14,8 @@ import { RENDER_MODEL_BG_OFFSET, RENDER_MODEL_FG_OFFSET, RENDER_MODEL_INDICIES_P
 import { IRenderModel, IWebGL2RenderingContext, IWebGLVertexArrayObject } from './Types';
 import { createProgram, expandFloat32Array, PROJECTION_MATRIX } from './WebglUtils';
 import { throwIfFalsy } from 'browser/renderer/shared/RendererUtils';
+import * as AmethystModel from './AmethystModel'
+import * as Mat from './Matrix'
 
 const enum VertexAttribLocations {
   POSITION = 0,
@@ -52,6 +54,28 @@ out vec4 outColor;
 void main() {
   outColor = v_color;
 }`;
+
+const logoVertexShaderSource = glsl(`#version 300 es
+layout (location = ${VertexAttribLocations.POSITION}) in vec4 a_position;
+
+uniform mat4 u_projection;
+
+out float depth;
+
+void main() {
+  gl_Position = u_projection * a_position;
+  depth = gl_Position.z;
+}`);
+
+const logoFragmentShaderSource = glsl(`#version 300 es
+precision lowp float;
+
+in float depth;
+out vec4 outColor;
+
+void main() {
+  outColor = vec4(1.0, 1.0, 1.0, 1.0);
+}`);
 
 
 const customVertexShaderSource = glsl(`#version 300 es
@@ -187,6 +211,11 @@ export class RectangleRenderer extends Disposable {
   private _attributesBuffer: WebGLBuffer;
   private _projectionLocation: WebGLUniformLocation;
 
+  private _logoVertexArrayObject: IWebGLVertexArrayObject;
+  private _logoAttributesBuffer: WebGLBuffer;
+  private _logoProjectionLocation: WebGLUniformLocation;
+  private _logoProgram: WebGLProgram;
+
   private _customProgram: WebGLProgram;
   private _customProjectionLocation: WebGLUniformLocation;
   private _customBaseImageLocation: WebGLUniformLocation;
@@ -215,6 +244,8 @@ export class RectangleRenderer extends Disposable {
   private _vertices: Vertices = new Vertices();
   private _verticesCursor: Vertices = new Vertices();
 
+  private _start: Date;
+
   constructor(
     private _terminal: Terminal,
     private _gl: IWebGL2RenderingContext,
@@ -227,6 +258,10 @@ export class RectangleRenderer extends Disposable {
 
     this._program = throwIfFalsy(createProgram(gl, vertexShaderSource, fragmentShaderSource));
     this._register(toDisposable(() => gl.deleteProgram(this._program)));
+
+    const t = createProgram(gl, logoVertexShaderSource, logoFragmentShaderSource);
+    this._logoProgram = throwIfFalsy(t);
+    this._register(toDisposable(() => gl.deleteProgram(this._logoProgram)));
 
     this._customProgram = throwIfFalsy(createProgram(gl, customVertexShaderSource, customFragmentShaderSource));
     this._register(toDisposable(() => gl.deleteProgram(this._customProgram)));
@@ -242,6 +277,8 @@ export class RectangleRenderer extends Disposable {
 
     // Uniform locations
     this._projectionLocation = throwIfFalsy(gl.getUniformLocation(this._program, 'u_projection'));
+
+    this._logoProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._logoProgram, 'u_projection'));
 
     this._customProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._customProgram, 'u_projection'));
     this._customBaseImageLocation =  throwIfFalsy(gl.getUniformLocation(this._customProgram, "u_image"));
@@ -260,6 +297,24 @@ export class RectangleRenderer extends Disposable {
     this._scanlineUnitLocation       = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, 'u_unit'));
     this._scanlineResolutionLocation = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, 'u_resolution'));
     this._scanlineTimeLocation       = throwIfFalsy(gl.getUniformLocation(this._scanlineProgram, "u_time"));
+
+    this._start = new Date();
+
+    // Setup Amethyst Logo attributes
+    this._logoAttributesBuffer = throwIfFalsy(gl.createBuffer());
+    this._register(toDisposable(() => gl.deleteBuffer(this._logoAttributesBuffer)));
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._logoAttributesBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(AmethystModel.points), gl.STATIC_DRAW)
+    console.log(Float32Array.BYTES_PER_ELEMENT * AmethystModel.points.length);
+    this._logoVertexArrayObject = gl.createVertexArray()
+    gl.bindVertexArray(this._logoVertexArrayObject)
+    var size = 3;          // 3 components per iteration
+    var type = gl.FLOAT;   // the data is 32bit floats
+    var normalize = true; // don't normalize the data
+    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+    var offset = 0;        // start at the beginning of the buffer
+    gl.enableVertexAttribArray(VertexAttribLocations.POSITION);
+    gl.vertexAttribPointer(VertexAttribLocations.POSITION, size, type, normalize, stride, offset)
 
     // Create and set the vertex array object
     this._vertexArrayObject = gl.createVertexArray();
@@ -304,27 +359,15 @@ export class RectangleRenderer extends Disposable {
     }));
   }
 
+  public renderLogo(): void {
+
+  }
 
   public renderTerminalWithCustomShaders(frameBuffers: Array<WebGLFramebuffer>, textureNums: Array<number>): void {
     const gl = this._gl;
-
-    function drawFrom(from: number, to: number | null, location: WebGLUniformLocation) {
-      gl.uniform1i(location, textureNums[from]);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, to != null ? frameBuffers[to]: null);
-    }
-
-
     const verteces = this._vertices;
     const vao = this._vertexArrayObject;
     const attributesBuffer = this._attributesBuffer;
-
-    gl.bindVertexArray(vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, attributesBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, verteces.attributes, gl.DYNAMIC_DRAW);
-
-    function draw() {
-      gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_BYTE, 0, verteces.count);
-    }
 
     const width = this._dimensions.device.canvas.width;
     const height = this._dimensions.device.canvas.height;
@@ -332,9 +375,47 @@ export class RectangleRenderer extends Disposable {
     const unit_width = width / this._terminal.cols;
     const unit_height = height / this._terminal.rows;
     const unit = new Float32Array([unit_width, unit_height]);
-    const time_speed = 5000;
-    const time_period = 3.1415 * 2.0;
-    const time = ((new Date().getTime() % time_speed) / time_speed) * time_period;
+    const scanline_time_speed = 5000;
+    const scanline_time_period = 3.1415 * 2.0;
+    const scanline_time = ((new Date().getTime() % scanline_time_speed) / scanline_time_speed) * scanline_time_period;
+
+    function drawFrom(from: number, to: number | null, location: WebGLUniformLocation) {
+      gl.uniform1i(location, textureNums[from]);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, to != null ? frameBuffers[to]: null);
+    }
+
+    function draw() {
+      gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_BYTE, 0, verteces.count);
+    }
+
+    const time_passed = ((new Date()).getTime() - this._start.getTime()) / 1000.0;
+    if (time_passed < 4.0) {
+      let rotation = (time_passed - 1.0) * 1.2;
+      if (rotation < 0.0) {
+        rotation = 0.0;
+      } else if (rotation > Math.PI/2.0) {
+        rotation = Math.PI/2.0;
+      }
+      rotation += Math.PI/2.0;
+      const logo_size = 300.0;
+      let matrix = Mat.yRotate(Mat.scaling(logo_size/width, logo_size/height, 0.5), rotation);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffers[0]);
+      this.renderBackgrounds()
+      gl.useProgram(this._logoProgram);
+      gl.bindVertexArray(this._logoVertexArrayObject);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._logoAttributesBuffer);
+      gl.uniformMatrix4fv(this._logoProjectionLocation, false, matrix);
+
+      gl.drawArrays(gl.TRIANGLES, 0, AmethystModel.points.length/3)
+      console.log(AmethystModel.points.length)
+    }
+
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, attributesBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, verteces.attributes, gl.DYNAMIC_DRAW);
+
+
 
     ///////////////
     // Apply scanlines
@@ -344,7 +425,7 @@ export class RectangleRenderer extends Disposable {
     gl.uniformMatrix4fv(this._scanlineProjectionLocation, false, PROJECTION_MATRIX);
     gl.uniform2fv(this._scanlineUnitLocation, unit);
     gl.uniform2fv(this._scanlineResolutionLocation, width_height);
-    gl.uniform1f(this._scanlineTimeLocation, time*2.0);
+    gl.uniform1f(this._scanlineTimeLocation, scanline_time*2.0);
     draw();
 
     ///////////////
