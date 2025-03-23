@@ -305,7 +305,6 @@ export class RectangleRenderer extends Disposable {
     this._register(toDisposable(() => gl.deleteBuffer(this._logoAttributesBuffer)));
     gl.bindBuffer(gl.ARRAY_BUFFER, this._logoAttributesBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(AmethystModel.points), gl.STATIC_DRAW)
-    console.log(Float32Array.BYTES_PER_ELEMENT * AmethystModel.points.length);
     this._logoVertexArrayObject = gl.createVertexArray()
     gl.bindVertexArray(this._logoVertexArrayObject)
     var size = 3;          // 3 components per iteration
@@ -408,7 +407,6 @@ export class RectangleRenderer extends Disposable {
       gl.uniformMatrix4fv(this._logoProjectionLocation, false, matrix);
 
       gl.drawArrays(gl.TRIANGLES, 0, AmethystModel.points.length/3)
-      console.log(AmethystModel.points.length)
     }
 
     gl.bindVertexArray(vao);
