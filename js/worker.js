@@ -1,8 +1,8 @@
 // greetingWorker.js
 import * as amethyst from "cli"
 
-const cli = amethyst.get_cli();
-const jsSender = cli.take_sender();
+const vmBuilder = amethyst.get_vm_builder();
+const jsSender = vmBuilder.take_sender();
 
 // functions to export to rust
 self.sleep = async function(time) {
@@ -18,4 +18,4 @@ self.onmessage = async (data) => {
 // required as it marks the completion of the handler setup from the worker's end
 self.postMessage("done loading")
 
-await amethyst.run(cli, self.postMessage, this);
+await amethyst.run(vmBuilder, self.postMessage, this);
