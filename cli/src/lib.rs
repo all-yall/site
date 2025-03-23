@@ -2,6 +2,7 @@ pub mod from_javascript;
 pub mod wasmio;
 pub mod vm_builder;
 pub mod vm;
+pub mod conway;
 
 use js_sys::Function;
 use vm::VM;

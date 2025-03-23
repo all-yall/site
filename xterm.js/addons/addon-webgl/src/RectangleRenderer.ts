@@ -388,8 +388,8 @@ export class RectangleRenderer extends Disposable {
     }
 
     const time_passed = ((new Date()).getTime() - this._start.getTime()) / 1000.0;
-    if (time_passed < 4.0) {
-      let rotation = (time_passed - 1.0) * 1.2;
+    if (time_passed < 2.5) {
+      let rotation = (time_passed - 0.7) * 1.2;
       if (rotation < 0.0) {
         rotation = 0.0;
       } else if (rotation > Math.PI/2.0) {

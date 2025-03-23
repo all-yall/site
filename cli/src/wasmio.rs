@@ -31,6 +31,20 @@ impl<'a> WasmIO<'a> {
       Ok(msg) => msg,
     }
   }
+
+  pub fn try_read(&self) -> Option<String> {
+    self.stdin_channel.try_recv().unwrap()
+  }
+
+  pub async fn clear(&mut self) {
+    while self.has_input() {
+      self.read().await;
+    }
+  }
+
+  pub fn has_input(&self) -> bool {
+    self.stdin_channel.len() != 0
+  }
 }
 
 impl<'a> Write for WasmIO<'a> {

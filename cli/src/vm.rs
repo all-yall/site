@@ -1,6 +1,5 @@
 use crate::{
-  wasmio::WasmIO,
-  from_javascript::*,
+  conway::conway, from_javascript::*, wasmio::WasmIO
 };
 
 
@@ -91,6 +90,9 @@ impl<'a> VM<'a> {
         }
       }
       self.newline();
+      if self.io.try_read().is_some_and(|m| m == "") {
+        break;
+      }
     }
   }
 
@@ -109,7 +111,7 @@ impl<'a> VM<'a> {
       }
 
       &"conway" => {
-
+        conway(&mut self.io).await;
       }
 
       &"ls" | &"cd" | &"mkdir" | &"rm" => {

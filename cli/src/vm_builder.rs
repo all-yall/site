@@ -1,5 +1,6 @@
+use js_sys::Promise;
 use wasm_bindgen::prelude::*;
-use kanal::{AsyncSender, AsyncReceiver, bounded_async};
+use kanal::{AsyncSender, AsyncReceiver, unbounded_async};
 
 #[wasm_bindgen]
 pub struct VMBuilder {
@@ -31,7 +32,7 @@ pub fn take_reciever(vm_builder: &mut VMBuilder) -> AsyncReceiver<String> {
 #[wasm_bindgen]
 pub fn get_vm_builder() -> VMBuilder {
   console_error_panic_hook::set_once();
-  let (send, recv) = bounded_async(10); // idk, 10 is good right?
+  let (send, recv) = unbounded_async();
   let send = Some(send);
   let recv = Some(recv);
   VMBuilder {
