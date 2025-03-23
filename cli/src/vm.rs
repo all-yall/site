@@ -5,6 +5,8 @@ use crate::{
 
 const LOGO: &str = include_str!("../ascii/logo.ascii");
 const HELP: &str = include_str!("../ascii/help.ascii");
+const ABOUT: &str = include_str!("../ascii/about.ascii");
+const EXIT: &str = include_str!("../ascii/exit.ascii");
 
 pub struct VM<'a> {
   line: String,
@@ -110,16 +112,29 @@ impl<'a> VM<'a> {
         self.delay_print(HELP).await;
       }
 
+      &"about" => {
+        self.delay_print(ABOUT).await;
+      }
+
+      &"shutdown" => {
+        self.delay_print(EXIT).await;
+        shutdown();
+      }
+
       &"conway" => {
         conway(&mut self.io).await;
       }
 
-      &"ls" | &"cd" | &"mkdir" | &"rm" => {
-        self.delay_print("Install 'HARD DRIVE' to activate 'FILE' module").await;
+      &"echo" => {
+        self.delay_print(line.strip_prefix("echo").unwrap()).await;
       }
 
       &"boomslang" => {
         self.delay_print("'PRODUCTIVITY' module still in development").await;
+      }
+
+      &"ls" | &"cd" | &"mkdir" | &"rm" => {
+        self.delay_print("Install 'HARD DRIVE' to activate 'FILE' module").await;
       }
 
       tok => {

@@ -1,5 +1,9 @@
 
-  This is a fantasy computer that I will try to use as my personal website.
-  You can find the source here; https://github.com/all-yall/site
-  For now there isn't much, though I'll try to fix that in the future.
+  Available Commands;
+
+  help - what you're looking at now
+  about - print a summary about this system and why it exists
+  conway - conway's game of life
+  echo <args> - print the args given to the terminal
+  shutdown - shut down the system
 

@@ -7,5 +7,8 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = self)]
     pub async fn sleep(s: u32);
+
+    #[wasm_bindgen(js_namespace = self)]
+    pub fn shutdown();
 }
 

@@ -74,7 +74,8 @@ in float depth;
 out vec4 outColor;
 
 void main() {
-  outColor = vec4(1.0, 1.0, 1.0, 1.0);
+  // #d8c2f7
+  outColor = vec4(0.84, 0.76, 0.97, 1.0);
 }`);
 
 

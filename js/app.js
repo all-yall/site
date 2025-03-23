@@ -19,7 +19,8 @@ let options = {
 }
 
 var term = new Terminal(options);
-term.loadAddon(new WebglAddon());
+const webGlAddon = new WebglAddon()
+term.loadAddon(webGlAddon);
 const fitAddon = new FitAddon();
 term.loadAddon(fitAddon);
 
@@ -30,9 +31,29 @@ await document.fonts.load("10px PetMeY");
 term.open(document.getElementById('terminal'));
 const worker = new Worker(new URL("./worker.js", import.meta.url));
 
+function special_command(cmd) {
+  console.log("Special command escape sequence recieved; " + cmd)
+  if (cmd == "SHUTDOWN") {
+    worker.terminate();
+    term.options.theme = {
+      background: "#111",
+      foreground: "#111",
+      cursor: "#111",
+      selectionForeground: "#111",
+      selectionBackground: "#111"
+    };
+    term.options.cursorBlink = false;
+    term.clear();
+  }
+}
+
 worker.onmessage = function(_) {
   worker.onmessage = function(data) {
-    term.write(data.data);
+    if (data.data[0] == '') {
+      special_command(data.data)
+    } else {
+      term.write(data.data);
+    }
   }
   worker.postMessage("startup")
 

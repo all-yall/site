@@ -11,6 +11,10 @@ self.sleep = async function(time) {
   );
 }
 
+self.shutdown = function() {
+  self.postMessage("SHUTDOWN")
+}
+
 
 self.onmessage = async (data) => {
   await jsSender.send(data.data);
