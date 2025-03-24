@@ -420,7 +420,6 @@ export class RectangleRenderer extends Disposable {
       if (time_passed > wipe_start_time) {
         wipe_percentage = (time_passed - wipe_start_time) / 0.5;
       }
-      console.log(wipe_percentage);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffers[0]);
       this.renderBackgrounds()
