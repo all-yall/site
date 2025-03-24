@@ -71,6 +71,7 @@ const logoFragmentShaderSource = glsl(`#version 300 es
 precision lowp float;
 
 uniform float u_wipe_percentage;
+uniform float u_screen_height;
 
 in float height;
 out vec4 outColor;
@@ -83,7 +84,7 @@ void main() {
   // #d8c2f7
   outColor = vec4(0.84, 0.76, 0.97, 1.0);
 
-  float wipe_size = 0.02;
+  float wipe_size = 40.0/u_screen_height;
   if (modulo(height, wipe_size) < (u_wipe_percentage * wipe_size)) {
     outColor.a = 0.0;
   }
@@ -227,6 +228,7 @@ export class RectangleRenderer extends Disposable {
   private _logoAttributesBuffer: WebGLBuffer;
   private _logoProjectionLocation: WebGLUniformLocation;
   private _logoWipePercentageLocation: WebGLUniformLocation;
+  private _logoScreenHeightLocation: WebGLUniformLocation;
   private _logoProgram: WebGLProgram;
 
   private _customProgram: WebGLProgram;
@@ -292,6 +294,7 @@ export class RectangleRenderer extends Disposable {
 
     this._logoProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._logoProgram, 'u_projection'));
     this._logoWipePercentageLocation = throwIfFalsy(gl.getUniformLocation(this._logoProgram, 'u_wipe_percentage'));
+    this._logoScreenHeightLocation = throwIfFalsy(gl.getUniformLocation(this._logoProgram, 'u_screen_height'));
 
     this._customProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._customProgram, 'u_projection'));
     this._customBaseImageLocation =  throwIfFalsy(gl.getUniformLocation(this._customProgram, "u_image"));
@@ -426,6 +429,7 @@ export class RectangleRenderer extends Disposable {
       gl.bindBuffer(gl.ARRAY_BUFFER, this._logoAttributesBuffer);
       gl.uniformMatrix4fv(this._logoProjectionLocation, false, matrix);
       gl.uniform1f(this._logoWipePercentageLocation, wipe_percentage);
+      gl.uniform1f(this._logoScreenHeightLocation, height);
 
       gl.drawArrays(gl.TRIANGLES, 0, AmethystModel.points.length/3)
     }
