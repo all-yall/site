@@ -60,22 +60,33 @@ layout (location = ${VertexAttribLocations.POSITION}) in vec4 a_position;
 
 uniform mat4 u_projection;
 
-out float depth;
+out float height;
 
 void main() {
   gl_Position = u_projection * a_position;
-  depth = gl_Position.z;
+  height = gl_Position.y;
 }`);
 
 const logoFragmentShaderSource = glsl(`#version 300 es
 precision lowp float;
 
-in float depth;
+uniform float u_wipe_percentage;
+
+in float height;
 out vec4 outColor;
+
+float modulo(float a, float b) {
+  return a - (floor(a / b) * b);
+}
 
 void main() {
   // #d8c2f7
   outColor = vec4(0.84, 0.76, 0.97, 1.0);
+
+  float wipe_size = 0.02;
+  if (modulo(height, wipe_size) < (u_wipe_percentage * wipe_size)) {
+    outColor.a = 0.0;
+  }
 }`);
 
 
@@ -215,6 +226,7 @@ export class RectangleRenderer extends Disposable {
   private _logoVertexArrayObject: IWebGLVertexArrayObject;
   private _logoAttributesBuffer: WebGLBuffer;
   private _logoProjectionLocation: WebGLUniformLocation;
+  private _logoWipePercentageLocation: WebGLUniformLocation;
   private _logoProgram: WebGLProgram;
 
   private _customProgram: WebGLProgram;
@@ -260,8 +272,7 @@ export class RectangleRenderer extends Disposable {
     this._program = throwIfFalsy(createProgram(gl, vertexShaderSource, fragmentShaderSource));
     this._register(toDisposable(() => gl.deleteProgram(this._program)));
 
-    const t = createProgram(gl, logoVertexShaderSource, logoFragmentShaderSource);
-    this._logoProgram = throwIfFalsy(t);
+    this._logoProgram = throwIfFalsy(createProgram(gl, logoVertexShaderSource, logoFragmentShaderSource));
     this._register(toDisposable(() => gl.deleteProgram(this._logoProgram)));
 
     this._customProgram = throwIfFalsy(createProgram(gl, customVertexShaderSource, customFragmentShaderSource));
@@ -280,6 +291,7 @@ export class RectangleRenderer extends Disposable {
     this._projectionLocation = throwIfFalsy(gl.getUniformLocation(this._program, 'u_projection'));
 
     this._logoProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._logoProgram, 'u_projection'));
+    this._logoWipePercentageLocation = throwIfFalsy(gl.getUniformLocation(this._logoProgram, 'u_wipe_percentage'));
 
     this._customProjectionLocation = throwIfFalsy(gl.getUniformLocation(this._customProgram, 'u_projection'));
     this._customBaseImageLocation =  throwIfFalsy(gl.getUniformLocation(this._customProgram, "u_image"));
@@ -389,7 +401,7 @@ export class RectangleRenderer extends Disposable {
     }
 
     const time_passed = ((new Date()).getTime() - this._start.getTime()) / 1000.0;
-    if (time_passed < 2.5) {
+    if (time_passed < 3.0) {
       let rotation = (time_passed - 0.7) * 1.2;
       if (rotation < 0.0) {
         rotation = 0.0;
@@ -400,12 +412,20 @@ export class RectangleRenderer extends Disposable {
       const logo_size = 300.0;
       let matrix = Mat.yRotate(Mat.scaling(logo_size/width, logo_size/height, 0.5), rotation);
 
+      var wipe_percentage = 0.0;
+      const wipe_start_time = 2.4
+      if (time_passed > wipe_start_time) {
+        wipe_percentage = (time_passed - wipe_start_time) / 0.5;
+      }
+      console.log(wipe_percentage);
+
       gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffers[0]);
       this.renderBackgrounds()
       gl.useProgram(this._logoProgram);
       gl.bindVertexArray(this._logoVertexArrayObject);
       gl.bindBuffer(gl.ARRAY_BUFFER, this._logoAttributesBuffer);
       gl.uniformMatrix4fv(this._logoProjectionLocation, false, matrix);
+      gl.uniform1f(this._logoWipePercentageLocation, wipe_percentage);
 
       gl.drawArrays(gl.TRIANGLES, 0, AmethystModel.points.length/3)
     }
