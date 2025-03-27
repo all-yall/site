@@ -84,7 +84,7 @@ void main() {
   // #d8c2f7
   outColor = vec4(0.84, 0.76, 0.97, 1.0);
 
-  float wipe_size = 40.0/u_screen_height;
+  float wipe_size = 60.0/u_screen_height;
   if (modulo(height, wipe_size) < (u_wipe_percentage * wipe_size)) {
     outColor.a = 0.0;
   }
