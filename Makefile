@@ -15,6 +15,13 @@ deploy: build
 	rm -rf /Volumes/webdav.fastmail.com/ally.purplish.blue/files/amethyst.purplish.blue/*
 	cp -r ./dist/* /Volumes/webdav.fastmail.com/ally.purplish.blue/files/amethyst.purplish.blue/
 
+# sometimes this is all that is needed, and this is a lot faster
+.PHONY:
+deploy-code: build
+	cp dist/js/app.js /Volumes/webdav.fastmail.com/ally.purplish.blue/files/amethyst.purplish.blue/js/app.js
+	rm /Volumes/webdav.fastmail.com/ally.purplish.blue/files/amethyst.purplish.blue/*wasm
+	cp dist/*wasm /Volumes/webdav.fastmail.com/ally.purplish.blue/files/amethyst.purplish.blue/
+
 
 ./xterm.js/addons/addon-webgl/src/AmethystModel.ts: model/amethyst.obj model/obj_to_js.rb
 	./model/obj_to_js.rb $< $@
