@@ -9,7 +9,7 @@ import * as cli from "cli"
 
 let options = {
   "theme" : {
-    "background" : "#080A4A",
+    "background" : "#180A4A",
     "foreground" : "#d8c2f7",
   },
   "cursorBlink": true,
